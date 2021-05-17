@@ -1,0 +1,48 @@
+Compile the grammar:
+java -jar antlr-4.8-complete.jar -Dlanguage=Python3 stl.g4 -visitor
+
+Use of STL validator:
+python stl.py <formula file> <signals csv file> <semantic=boolean/quantitative>
+
+Changing the used algorithm for the until operator in quantitative semantics:
+In the stlTree.py file on line 285 there is a boolean called "short_algo"
+True: the shorter algorithm using max and min is used
+False: the longer algorithm from efficient STL robustness calculation is used
+
+The program does the following:
+- prints the resulting result
+- shows the graph for each STL operator that has been used
+- saves the used STL tree in dot format in stlTree.dot.
+
+Examples:  (I didn't make multiple formula files, but always replaced it in the same file.)
+- python stl.py formula.stl signals/ex_1a.csv boolean
+  used formula: []{0,10}((p>0)-><>{1,2}(q>0))
+  first example from boolean paper with valid signals
+
+- python stl.py formula.stl signals/ex_1b.csv boolean
+  used formula: []{0,10}((p>0)-><>{1,2}(q>0))
+  first example from boolean paper with invalid signals
+
+- python stl.py formula.stl signals/ex_sin1.csv boolean
+  used formula: []{0,300}((x1>0.7)-><>{3,5}(x2>0.7))
+  second example from boolean paper with valid signals
+
+- python stl.py formula.stl signals/ex_sin2.csv boolean
+  used formula: []{0,300}((x1>0.7)-><>{3,5}(x2>0.7))
+  second example from boolean paper with invalid signals
+
+- python stl.py formula.stl signals/ex_sin1.csv quantitative
+  used formula: []{0,300}(x1-><>{3,5}x2)
+  second example from boolean paper with valid signals in quantitative semantics
+
+- python stl.py formula.stl signals/ex_sin2.csv quantitative
+  used formula: []{0,300}(x1-><>{3,5}x2)
+  second example from boolean paper with invalid signals in quantitative semantics
+
+- python stl.py formula.stl signals/ex_1c.csv boolean
+  used formula: (q>0) U{0.5,2.1} (p>0)
+  example until in boolean semantics presented in the report
+
+- python stl.py formula.stl signals/ex_1c.csv quantitative
+  used formula: q U{0.5,2.5} p
+  example until in quantitative semantics presented in the report
