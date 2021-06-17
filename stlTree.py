@@ -5,17 +5,17 @@ import matplotlib.pyplot as plt
 from stlUtils import *
 
 OPERATORS = {'=': lambda x, y: x == y,
-      '!=': lambda x, y: x != y,
-      '>=': lambda x, y: x >= y,
-      '<=': lambda x, y: x <= y,
-      '>': lambda x, y: x > y,
-      '<': lambda x, y: x < y}
+             '!=': lambda x, y: x != y,
+             '>=': lambda x, y: x >= y,
+             '<=': lambda x, y: x <= y,
+             '>': lambda x, y: x > y,
+             '<': lambda x, y: x < y}
 
-currentPlot = 0
+currentPlot = 0  # To know which subplot has to be used
 
 
 class Node:  # Abstract class
-    count = 0
+    count = 0  # Keep a number of the amount of nodes, also used to define ids
 
     def __init__(self):
         self.children = []
@@ -27,7 +27,7 @@ class Node:  # Abstract class
         self.line = 0
         self.column = 0
 
-        # For the creation of the tree
+        # For the creation of the tree, used in customStlListener
         self.doublePop = False
         self.negateNext = False
 
@@ -101,8 +101,8 @@ class ContentNode(Node):
     def validate(self, signals, semantic='quantitative', plot=False):
         if semantic != 'boolean' and semantic != 'quantitative':
             raise Exception('No valid semantic given!')
-        else:
-            if plot is not False:
+        else:  # Validate the given signals with the given formula
+            if plot is not False:  # Create subplots if necessary
                 global currentPlot
                 currentPlot = 0
                 plotAmount = self.calculatePlotAmount()
@@ -132,6 +132,7 @@ class FormulaNode(Node):  # Abstract class
     def calculatePlotAmount(self):
         return sum([x.calculatePlotAmount() for x in self.children]) + 1
 
+    # Plot the last executed operation
     def plot(self, signal, axs, semantic='quantitative'):
         global currentPlot
         if not isinstance(axs, numpy.ndarray):
@@ -152,9 +153,9 @@ class NegationNode(FormulaNode):
     def validate(self, signals, semantic='quantitative', plot=False):
         result = self.children[0].validate(signals, semantic, plot)
         temp = []
-        if semantic == 'boolean':
-            temp += [result[0], [-x+1 for x in result[1]]]
-        elif semantic == 'quantitative':
+        if semantic == 'boolean':  # 0 -> 1, 1 -> 0
+            temp += [result[0], [-x + 1 for x in result[1]]]
+        elif semantic == 'quantitative':  # x * (-1)
             temp.append(result[0])
             temp.append([-x for x in result[1]])
             temp.append([-x for x in result[2]])
@@ -168,7 +169,8 @@ class AndNode(FormulaNode):
         FormulaNode.__init__(self)
 
     def validate(self, signals, semantic='quantitative', plot=False):
-        result = [self.children[0].validate(signals, semantic, plot), self.children[1].validate(signals, semantic, plot)]
+        result = [self.children[0].validate(signals, semantic, plot),
+                  self.children[1].validate(signals, semantic, plot)]
         temp = [[], []]
         if semantic == 'boolean':
             result = list(getPunctualIntersection(result[0], result[1], semantic='boolean'))
@@ -253,7 +255,7 @@ class UntilNode(FormulaNode):
                         if intersection:
                             intervals_until.append(intersection)
 
-            # Calculate the entire until - make the intervals true in the until
+            # Calculate the entire until, make the intervals true in the until
             until += [result[1][0].copy()] + [[0] * size]
             for inter in intervals_until:
                 for t in inter:
@@ -285,11 +287,12 @@ class UntilNode(FormulaNode):
                 #     if i < size - b:
                 #         until[1][i] = 1
         elif semantic == 'quantitative':
+            # Start a timer to time the until process
             # import time
             # start_1 = time.time()
 
-            short_algo = True
-            # result = [result[1], result[0]]
+            short_algo = True  # Use the short algorithm (which works completely) or the longer one (needs some fixing)
+
             until += [[], [], []]
             if short_algo:
                 for i in range(size):
@@ -313,15 +316,10 @@ class UntilNode(FormulaNode):
                             until[0][-1] = result[0][0][-1] - b
                             until[1][-1] = getAffinePoint(until, result[0][0][-1] - b)
                             until[2][-1] = until[2][-2]
-                            # until[0][i] = result[0][0][-1] - b
-                            # until[1][i] = getAffinePoint(until, result[0][0][-1] - b)
-                            # until[2][i] = until[2][i - 1]
                         else:
                             until[0].pop(-1)
                             until[1].pop(-1)
                             until[2].pop(-1)
-                            # until[1][i] = 0
-                            # until[2][i] = 0
             else:
                 def shift(y, v):
                     temp = [t - v for t in y[0]]  # Shift the signal
@@ -334,10 +332,13 @@ class UntilNode(FormulaNode):
 
                     result = [temp[i:], y[1][i:], y[2][i:]]
 
-                    if i > 0 and result[0][0] != 0 and y[2][i] != 0:  # Add a point at time step 0 if the derivative of the last deleted point isn't 0
+                    if i > 0 and result[0][0] != 0 and y[2][
+                        i] != 0:  # Add a point at time step 0 if the derivative of the last deleted point isn't 0
                         result[0] = [0] + result[0]
                         result[1] = [getAffinePoint(y, v)] + result[1]
-                        result[2] = list(numpy.diff([result[1][0], result[1][1]]) / numpy.diff([result[0][0], result[0][1]])) + result[2]
+                        result[2] = list(
+                            numpy.diff([result[1][0], result[1][1]]) / numpy.diff([result[0][0], result[0][1]])) + \
+                                    result[2]
                     return result
 
                 def computeAnd(x, y):
@@ -354,7 +355,7 @@ class UntilNode(FormulaNode):
                     y_a = shift(x, a)
                     y_b = shift(x, b)
                     y = computeOr(y_a, y_b)
-
+                    # Initialize variables
                     s = x[0][0] - b
                     t = s
                     i = 0
@@ -413,14 +414,14 @@ class UntilNode(FormulaNode):
                 # Because the algorithm doesn't include the last value, we act as if we don't have an half open interval in python
                 while i >= 0:
                     if result[0][2][i] <= 0:
-                        z_1 = computeAnd([x[i:(i+1)+1] for x in result[1]], [x[i:(i+1)+1] for x in result[0]])
+                        z_1 = computeAnd([x[i:(i + 1) + 1] for x in result[1]], [x[i:(i + 1) + 1] for x in result[0]])
                         z_2 = computeEventually(z_1, result[0][0][0])
-                        z_3 = computeAnd([x[i:(i+1)+1] for x in result[0]], z_0)
+                        z_3 = computeAnd([x[i:(i + 1) + 1] for x in result[0]], z_0)
                         temp = computeOr(z_2, z_3)
                     else:
-                        z_1 = computeEventually([x[i:(i+1)+1] for x in result[1]], result[0][0][0])
-                        z_2 = computeAnd(z_1, [x[i:(i+1)+1] for x in result[0]])
-                        z_3 = computeAnd([result[0][0], [result[0][0][i+1]] * size, [0] * size], z_0)
+                        z_1 = computeEventually([x[i:(i + 1) + 1] for x in result[1]], result[0][0][0])
+                        z_2 = computeAnd(z_1, [x[i:(i + 1) + 1] for x in result[0]])
+                        z_3 = computeAnd([result[0][0], [result[0][0][i + 1]] * size, [0] * size], z_0)
                         temp = computeOr(z_2, z_3)
 
                     t_i = temp[0].index(result[1][0][i])
@@ -438,6 +439,7 @@ class UntilNode(FormulaNode):
         if plot is not False:
             self.plot(until, plot, semantic)
 
+        # End the timer of the the until process
         # end_1 = time.time()
         # print(f'time for until operation: {end_1 - start_1}s')
 
@@ -453,7 +455,8 @@ class BooleanFilterNode(FormulaNode):
         self.filter = str(token)
 
     def validate(self, signals, semantic='quantitative', plot=False):
-        result = [self.children[0].validate(signals, semantic, plot), self.children[1].validate(signals, semantic, plot)]
+        result = [self.children[0].validate(signals, semantic, plot),
+                  self.children[1].validate(signals, semantic, plot)]
         temp = []
         if isinstance(result[0], list) and isinstance(result[1], list):
             result = list(getPunctualIntersection(result[0], result[1], semantic))
@@ -522,7 +525,8 @@ class ProductNode(OperationNode):
             self.operator = -1
 
     def validate(self, signals, semantic='quantitative', plot=False):  # TODO: test
-        result = [self.children[0].validate(signals, semantic, plot), self.children[1].validate(signals, semantic, plot)]
+        result = [self.children[0].validate(signals, semantic, plot),
+                  self.children[1].validate(signals, semantic, plot)]
         if isinstance(result[0], list) and isinstance(result[1], list):
             result = list(getPunctualIntersection(result[0], result[1], semantic))
             temp = [[], []]
@@ -542,7 +546,8 @@ class ProductNode(OperationNode):
         elif isinstance(result[0], Number) and isinstance(result[1], Number):
             return result[0] + pow(result[1], self.operator)
         else:
-            self.throwError('Encountered a p[range(len(result[0][0]))], roduct/division of unknown types ' + str(type(result[0])) + ' and '
+            self.throwError('Encountered a p[range(len(result[0][0]))], roduct/division of unknown types ' + str(
+                type(result[0])) + ' and '
                             + str(type(result[1])))
 
 
@@ -556,7 +561,8 @@ class SumNode(OperationNode):
             self.operator = -1
 
     def validate(self, signals, semantic='quantitative', plot=False):
-        result = [self.children[0].validate(signals, semantic, plot), self.children[1].validate(signals, semantic, plot)]
+        result = [self.children[0].validate(signals, semantic, plot),
+                  self.children[1].validate(signals, semantic, plot)]
         if isinstance(result[0], list) and isinstance(result[1], list):
             result = list(getPunctualIntersection(result[0], result[1], semantic))
             temp = [[], []]
@@ -658,15 +664,6 @@ class SignalNode(Node):
             self.printWarning(
                 'The signal ' + self.signalName + ' doesn\'t have timestamps (' + self.signalName + '_t) defined, they are generated automatically!')
             signal[0] = [x for x in range(len(signal[1]))]
-
-        # if semantic == 'quantitative' and self.signalName + '_d' in signals.columns:
-        #     signal[2] = [x for x in list(signals[self.signalName + '_d']) if not pd.isnull(x)]
-        # else:
-        #     self.printWarning(
-        #         'The signal ' + self.signalName + ' doesn\'t have derivatives (' + self.signalName + '_d) defined, they are automatically calculated from the values!')
-        #     # Calculation of the derivative
-        #     dydx = numpy.diff(signal[1]) / numpy.diff(signal[0])
-        #     signal[2] = list(dydx) + [0]
 
         return signal
 
