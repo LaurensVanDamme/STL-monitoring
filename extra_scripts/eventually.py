@@ -1,3 +1,5 @@
+# This is a test script that only performes the eventually operation on a given signal in quantitative semantics
+
 from stlUtils import *
 
 # New random example
@@ -81,7 +83,7 @@ def computeEventually(x, t_0=float('inf')):
     y_b = shift(x, b)
     y = computeOr(y_a, y_b)
 
-    # TODO: no idea if this is needed
+    # no idea if this is needed
     # x, y = getPunctualIntersection(x, y)
 
     # i = 1
@@ -107,7 +109,7 @@ def computeEventually(x, t_0=float('inf')):
     #         y[1].pop(i-1)
     #         y[2].pop(i-1)
 
-    # TODO: not sure if this is needed
+    # not sure if this is needed
     # # All time steps of x have to be present in y
     # # If they are not, we can be sure that the max of x and y is the value of x at that time step
     # for i in range(len(x[0])):
@@ -124,9 +126,7 @@ def computeEventually(x, t_0=float('inf')):
 
     z = [[], [], []]
 
-    # while t + a < x[0][-2]:  # TODO: -2 should be -1 if 8 is not included (but now the rest depends on it)
     while t + a < x[0][-1]:
-        # if i + 1 < len(x[0]) - 1 and len(M) > 0:  # TODO: -1 (first condition) shouldn't be there if 8 is not included (but now the rest depends on it)
         if i + 1 < len(x[0]) and len(M) > 0:
             t = min(min(M) - a, x[0][i+1] - b)
         elif len(M) == 0:
@@ -176,7 +176,7 @@ def computeEventually(x, t_0=float('inf')):
         #     else:
         #         M.add(t + a + 1)
 
-        # if s >= t_0:  # and s != t:  # TODO: check if M is empty and use formula with max (in test.py)
+        # if s >= t_0:  # and s != t:
         #     if len(M) == 0:
         #         computed_or = y
         #     else:

@@ -2,7 +2,7 @@
 from antlr4 import *
 from antlr4 import TerminalNode
 from stlListener import stlListener
-from stlTree import *
+from stlTree import *  # Imports all node types of STL tree
 
 if __name__ is not None and "." in __name__:
     from .stlParser import stlParser
@@ -24,12 +24,12 @@ class customStlListener(stlListener):
             self.stlTree.negateNext = False  # First formula can't be negated
             implicaton = True
 
-        # If the former type of node needs the next node to be negated
+        # If the former type of node needs the its children to be negated
         if self.stlTree.negateNext and isinstance(node, FormulaNode):
             self.stlTree.negateNext = False  # Make false to avoid inf loop
-            self.generateBranch(NegationNode(), context)
+            self.generateBranch(NegationNode(), context)  # Add the negation node
             self.stlTree.parent.negateNext = True  # Don't forget to make it true again (now one node further so parent)
-            self.stlTree.doublePop = True
+            self.stlTree.doublePop = True  # Two nodes added, so two nodes have to be popped later (recursive behaviour)
 
         if implicaton:  # Make sure the next is negated
             self.stlTree.negateNext = True
@@ -38,6 +38,7 @@ class customStlListener(stlListener):
         node.line = context.start.line
         node.column = context.start.column
 
+        # Add the new node and make the current tree the new branch (recursive behavior)
         self.stlTree.add(node=node)
         self.stlTree = node
 
@@ -47,33 +48,21 @@ class customStlListener(stlListener):
 
         if token in '[]{}();,':  # Ignore these tokens
             return
-        self.stlTree.processToken(token)
+        self.stlTree.processToken(token)  # Put the value of the token into a variable to use later on
 
     # Go back up the tree
     def popStack(self):
-        # # If only one child is present, delete the intermediate node
-        # if len(self.stlTree.children) == 1 and self.stlTree.parent is not None \
-        #         and not isinstance(self.stlTree, NegationNode):  # If for some reason a type needs an intermediate node -> ignore
-        #     self.stlTree.parent.add(self.stlTree.children[0])
-        #     self.stlTree.parent.children.remove(self.stlTree)
-
-        # # merged nodes met zijn kind, bijvoorbeeld een + met als kind een int en een plus, dan worden de plusjes samengevoegd
-        # for child in self.stlTree.children:
-        #     if self.stlTree.canMerge(child):
-        #         self.stlTree.merge(child)
-
         # If node = negation and child too -> simplify
         if isinstance(self.stlTree, NegationNode) and isinstance(self.stlTree.children[0], NegationNode):
             self.stlTree.parent.add(self.stlTree.children[0].children[0])
             self.stlTree.parent.children.remove(self.stlTree)
             self.stlTree.children[0].children[0].parent = self.stlTree.parent
 
-
         # Go back to the parent of the node
         if self.stlTree.parent is not None:
             self.stlTree = self.stlTree.parent
 
-        # If a double pop is necessary
+        # If a double pop is necessary (when two nodes were added)
         if self.stlTree.doublePop:
             self.stlTree.doublePop = False
             self.popStack()
@@ -95,8 +84,8 @@ class customStlListener(stlListener):
 
     # Exit a parse tree produced by stlParser#always.
     def exitAlways(self, ctx: stlParser.AlwaysContext):
-        self.popStack()
-        self.popStack()
+        self.popStack()  # Leave the Until node
+        self.popStack()  # Leave the Negation node
 
     # Enter a parse tree produced by stlParser#booleanFilter.
     def enterBooleanFilter(self, ctx: stlParser.BooleanFilterContext):
@@ -144,7 +133,7 @@ class customStlListener(stlListener):
     def enterImplication(self, ctx: stlParser.ImplicationContext):  # a→b := ¬a∨b := ¬(a∧¬b)
         self.generateBranch(NegationNode(), ctx)
         self.generateBranch(AndNode(), ctx)
-        self.stlTree.negateNext = 2
+        self.stlTree.negateNext = 2  # Indicate that the second child of the and node has to be negated
 
     # Exit a parse tree produced by stlParser#implication.
     def exitImplication(self, ctx: stlParser.ImplicationContext):

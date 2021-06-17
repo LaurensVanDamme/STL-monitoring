@@ -4,8 +4,8 @@ import pandas as pd
 
 
 def until_comparison():
-    input = pd.read_csv('ex_decreasing_3000.csv')
-    until = pd.read_csv('results/until_comparison.csv', index_col=False)
+    input = pd.read_csv('../signals/ex_decreasing_3000.csv')
+    until = pd.read_csv('../signals/results/until_comparison.csv', index_col=False)
 
     plt.plot(input['x1'], '-', label='s1 = (((t - 3000)^2) * 0.00035) + 200')
     plt.plot(input['x2'], '-', label='s2 = -t + 3000')
@@ -25,8 +25,8 @@ def until_comparison():
 
 
 def bool_vs_quan():
-    input_1 = pd.read_csv('results/angles_ep5_bool.csv', index_col=False)
-    input_2 = pd.read_csv('results/angles_ep5_quan.csv', index_col=False)
+    input_1 = pd.read_csv('../signals/results/angles_ep5_bool.csv', index_col=False)
+    input_2 = pd.read_csv('../signals/results/angles_ep5_quan.csv', index_col=False)
 
     plt.plot(input_1['s'], '-', label='Validation (Boolean)')
     plt.plot(input_2['s'], '-', label='Robustness (Quantitative)')

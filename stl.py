@@ -10,6 +10,7 @@ from stlParser import stlParser
 def main(argv):
     # TODO: Add argument checker
 
+    # Start a timer to time the whole process
     # import time
     # start = time.time()
 
@@ -28,6 +29,7 @@ def main(argv):
     stlTree = listener.stlTree
 
     # TODO: make a min length algo that indicates how long signals should be to be validated
+    #  + checks if the given is long enough
 
     # Print the STL tree
     with open('stlTree.dot', 'w') as file:
@@ -36,8 +38,12 @@ def main(argv):
     # Read the signals
     signals = pd.read_csv(argv[2])
 
+    # Check if a semantic was given:
+    if len(argv) < 4:
+        argv.append('quantitative')
+
     # Validate the signals with the STL formula
-    result = stlTree.validate(signals, argv[3], True)  # TODO: doesn't work if no third argument is given
+    result = stlTree.validate(signals, semantic=argv[3].lower(), plot=True)
     print(result)
 
     import numpy as np
@@ -45,6 +51,7 @@ def main(argv):
     df = pd.DataFrame(numpy_array.T, columns=['s_t', 's'])
     df.to_csv('angles_ep5_bool.csv', index=False)
 
+    # End the timer of the whole process
     # end = time.time()
     # print(f'time for the full operation: {end - start}s')
 

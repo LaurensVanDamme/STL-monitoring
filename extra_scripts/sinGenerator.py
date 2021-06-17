@@ -3,6 +3,7 @@ import math
 import matplotlib.pyplot as plt
 import random
 
+# To create input signals
 if __name__ == "__main__":
     amount = 9000
     omega = 2 * math.pi * 1/78.5  # f = 1/78.5 ; T = 78.5 -> 1 cycle every 78.5 time steps

@@ -4,6 +4,7 @@ import numpy
 def cm2inch(value):
     return value/2.54
 
+
 def line_intersection(line1, line2):
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
     ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
@@ -19,6 +20,7 @@ def line_intersection(line1, line2):
     x = det(d, xdiff) / div
     y = det(d, ydiff) / div
     return x, y
+
 
 # def getSamplingPointsIntersection(s1, s2):
 #     loop_range = len(s1)
@@ -49,22 +51,29 @@ def line_intersection(line1, line2):
 #     return s1, s2
 
 
+# Get the value of a signal at time step t
 def getAffinePoint(signal, t):
-    if t > max(signal[0]):
-        return signal[1][-1] + signal[2][-1] * (t - signal[0][-1])
+    if t > max(signal[0]):  # If affine point outside of the given signal
+        return signal[1][-1] + signal[2][-1] * (t - signal[0][-1])  # Calculate using derivative (fplc)
+    # Search the location of the time step t in the signal
     i = 0
     while signal[0][i] <= t:
+        # If a value already exists on t
         if signal[0][i] == t:
             return signal[1][i]
         i += 1
+    # If the time step t is before the singal started
     if i == 0:
         return signal[1][i]
+    # If the time step t is after the signal
     elif i >= len(signal[0]):
         return signal[1][-1]
+    # If the time step t is somewhere in the signal but no value exists yet, calculate knowing it's fplc
     else:
         return float(signal[1][i] - signal[1][i - 1]) / float(signal[0][i] - signal[0][i - 1]) * float(t - signal[0][i - 1]) + signal[1][i - 1]
 
 
+# Get a derivative of the signal at time step t
 def getAffineDerivative(signal, t):
     if t < signal[0][0]:
         return 0
@@ -73,17 +82,20 @@ def getAffineDerivative(signal, t):
             return signal[2][i - 1]
 
 
+# Get an interval of a signal between time steps a and b
+# If half open, the last value of time step b will not be included
 def getSignalInterval(signal, a, b, half_open=False):
+    # If the interval is outside of the singal
     if a > signal[0][-1]:
         return [[a, b + 1], [signal[1][-1]] * 2, [0, 0]]
-
+    # Find the first value of the signal that is in the interval
     x = a
     if a not in signal[0]:
         for t in signal[0]:
             if t > a:
                 x = t
                 break
-
+    # If a and b are equal -> return same value twice if closed interval
     if a == b:
         if half_open:
             return [[], [], []]
@@ -93,7 +105,7 @@ def getSignalInterval(signal, a, b, half_open=False):
             else:
                 derivative = signal[2][signal[0].index(x) - 1]
             return [[a], [getAffinePoint(signal, a)], [derivative]]
-
+    # Search the last value of the signal that is in the interval
     y = b
     if b not in signal[0]:
         for i in reversed(range(len(signal[0]))):
@@ -105,22 +117,23 @@ def getSignalInterval(signal, a, b, half_open=False):
                 break
         if y == b:
             y = signal[0][0]
-
+    # Add the found interval to the result
     if half_open:
         result = [c[signal[0].index(x):signal[0].index(y)] for c in signal]
     else:
         result = [c[signal[0].index(x):signal[0].index(y) + 1] for c in signal]
-
+    # If a was not yet present in the signal, calculate and add it to the result
     if x != a:
         result[0] = [a] + result[0]
         result[1] = [getAffinePoint(signal, a)] + result[1]
-
+    # If b was not yet present in the signal and it's a closed interval, calculate and add it to the result
     if y != b and not half_open:
         result[0] += [b]
         result[1] += [getAffinePoint(signal, b)]
         result[2] += list(numpy.diff([result[1][-2], result[1][-1]]) / numpy.diff([result[0][-2], result[0][-1]]))
-
-    if x != a:  # positioned here if there wasn't a second value yet
+    # Add the derivative of time step a to the result at the end if it wasn't in the signal yet
+    # Positioned here so the calculation of b is only done with values that were present in the signal already
+    if x != a:
         result[2] = list(numpy.diff([result[1][0], result[1][1]]) / numpy.diff([result[0][0], result[0][1]])) + result[2]
 
     return result
@@ -167,7 +180,6 @@ def getPunctualIntersection(s1, s2, semantic='quantitative'):
         temp_2[1].append(s2[1][i])
         temp_2[2].append(s2[2][i])
 
-
     while i_1 < len(s1[0]) and i_2 < len(s2[0]) and (s1[0][i_1] <= end or s2[0][i_2] <= end):
         if s1[0][i_1] == s2[0][i_2]:  # Both signals are defined at the time step
             temp_1[0].append(s1[0][i_1])
@@ -204,7 +216,7 @@ def getPunctualIntersection(s1, s2, semantic='quantitative'):
             raise Exception("Something went wrong in getPunctualIntersection")
 
     # Fill the values from end on
-    # We assume that the signals are have a constant derivative from their last known value (should always be 0)
+    # We assume that the signals are having a constant derivative from their last known value (should always be 0)
     for i in range(i_1, len(s1[0])):
         temp_1[0].append(s1[0][i])
         temp_1[1].append(s1[1][i])
@@ -229,19 +241,6 @@ def getBooleanIntersection(a, b):
         return False
     else:
         return intersection
-    # Seems a stupid function to me, totally unnecessary and not well made
-    # a_indexes = []
-    # for i in range(a[0], a[1] + 1):
-    #     a_indexes.append(i)
-    # b_indexes = []
-    # for i in range(b[0], b[1] + 1):
-    #     b_indexes.append(i)
-    # intersection = [value for value in a_indexes if value in b_indexes]
-    # if len(intersection) > 0:
-    #     return [min(intersection), max(intersection)]
-    # else:
-    #     return False
-
 
 
 # x and y are signals in the form of [t, x, dx]
